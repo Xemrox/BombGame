@@ -8,6 +8,7 @@ void setup() {
   //Serial.begin(9600);
 
   //delay(100);
+  //randomSeed(analogRead(0));
 }
 
 void loop() {
