@@ -12,7 +12,7 @@ BombMachine* bomb;
 void setUp(void) {
     srandom(time(NULL));
     //randomSeed(analogRead(0));
-    bomb = new BombMachine();
+    bomb = new BombMachine("1234567*");
 }
 
 void tearDown(void) {
@@ -32,12 +32,14 @@ void checkStateChanges(BombMachine::BombState changes[], int size, bool allowed)
 void test_function_initialState() {
     BombMachine::BombState allowedTransitions[] = {
         BombMachine::BombState::Configuring,
-        BombMachine::BombState::Arming
+        BombMachine::BombState::PrepareArming
     };
     BombMachine::BombState disallowedTransitions[] = {
         BombMachine::BombState::Idle,
+        BombMachine::BombState::Arming,
         BombMachine::BombState::Armed,
         BombMachine::BombState::Disarmed,
+        BombMachine::BombState::PrepareDisarming,
         BombMachine::BombState::Disarming,
         BombMachine::BombState::Exploded,
         BombMachine::BombState::LockedArming,
@@ -53,6 +55,11 @@ void test_function_initialState() {
 
 void test_function_armingBombState() {
     bomb->setState(BombMachine::BombState::Arming);
+    TEST_ASSERT_EQUAL_INT32(BombMachine::Idle, bomb->getState());
+
+    bomb->setState(BombMachine::BombState::PrepareArming);
+    TEST_ASSERT_EQUAL_INT32(BombMachine::PrepareArming, bomb->getState());
+    bomb->setState(BombMachine::BombState::Arming);
     TEST_ASSERT_EQUAL_INT32(BombMachine::Arming, bomb->getState());
 
     BombMachine::BombState allowedTransitions[] = {
@@ -63,13 +70,14 @@ void test_function_armingBombState() {
     BombMachine::BombState disallowedTransitions[] = {
         BombMachine::BombState::Disarmed,
         BombMachine::BombState::Disarming,
+        BombMachine::BombState::Disarming,
         BombMachine::BombState::Exploded,
         BombMachine::BombState::LockedDisarming,
         BombMachine::BombState::Configuring,
         BombMachine::BombState::Configuration
     };
     checkStateChanges(allowedTransitions, 3, true);
-    checkStateChanges(disallowedTransitions, 5, false);    
+    checkStateChanges(disallowedTransitions, 5, false);
 }
 
 void test_function_inputNormal() {
@@ -77,7 +85,7 @@ void test_function_inputNormal() {
 
     //bomb->inputKey('#');
     bomb->inputKey('0');
-    
+
     const char* const buffer = bomb->getKeyBuffer();
     int bufferSize = bomb->getKeyBufferSize();
     int keyposition = bomb->getKeyPosition();
@@ -102,7 +110,7 @@ void test_function_inputOver() {
     bomb->inputKey('7');//01 23 45 67
     bomb->inputKey('8');//01 23 45 67
     bomb->inputKey('9');//01 23 45 67
-    
+
     const char* const buffer = bomb->getKeyBuffer();
     int bufferSize = bomb->getKeyBufferSize();
     int keyposition = bomb->getKeyPosition();
@@ -136,7 +144,7 @@ void test_function_inputRemoveMiddle() {
     bomb->inputKey('#');//01 23 45
     bomb->inputKey('8');//01 23 45 8
     bomb->inputKey('9');//01 23 45 89
-    
+
     const char* const buffer = bomb->getKeyBuffer();
     int bufferSize = bomb->getKeyBufferSize();
     int keyposition = bomb->getKeyPosition();
@@ -187,7 +195,7 @@ void test_function_testCode() {
     bomb->setState(BombMachine::BombState::Arming);
     bomb->prepareCode();
     const char* const bombCode = bomb->getBombCode();
-    
+
     for(int i = 0; i < bomb->getBombCodeSize(); i++) {
         bomb->inputKey(bombCode[i]);
     }
@@ -197,18 +205,18 @@ void test_function_testCode() {
 }
 
 void test_function_enterConfig() {
-    
+
     TEST_ASSERT_TRUE(bomb->getState() == BombMachine::BombState::Idle);
     bomb->inputKey('*');
     TEST_ASSERT_TRUE(bomb->getState() == BombMachine::BombState::Configuring);
-    
-    bomb->inputKey('8');
-    bomb->inputKey('7');
+
     bomb->inputKey('1');
-    bomb->inputKey('5');
-    bomb->inputKey('0');
-    bomb->inputKey('0');
+    bomb->inputKey('2');
     bomb->inputKey('3');
+    bomb->inputKey('4');
+    bomb->inputKey('5');
+    bomb->inputKey('6');
+    bomb->inputKey('7');
     bomb->inputKey('*');
 
     bomb->pressButton();
@@ -217,18 +225,18 @@ void test_function_enterConfig() {
 }
 
 void test_function_failEnterConfig() {
-    
+
     TEST_ASSERT_TRUE(bomb->getState() == BombMachine::BombState::Idle);
     bomb->inputKey('*');
     TEST_ASSERT_TRUE(bomb->getState() == BombMachine::BombState::Configuring);
-    
+
     bomb->inputKey('1');
     bomb->inputKey('2');
     bomb->inputKey('3');
     bomb->inputKey('4');
     bomb->inputKey('5');
     bomb->inputKey('6');
-    bomb->inputKey('7');
+    bomb->inputKey('0');
     bomb->inputKey('*');
 
     bomb->pressButton();
@@ -242,7 +250,7 @@ void test_function_configureCodeLength() {
     //skip check here
     bomb->setState(BombMachine::BombState::Configuration);
     TEST_ASSERT_TRUE(bomb->getState() == BombMachine::BombState::Configuration);
-    
+
     bomb->inputKey('0');//config option 0
     bomb->inputKey('*');//delimiter
     bomb->inputKey('0');
@@ -267,9 +275,9 @@ int main(int argc, char **argv) {
     RUN_TEST(test_function_testCode);
     RUN_TEST(test_function_enterConfig);
     RUN_TEST(test_function_failEnterConfig);
-    RUN_TEST(test_function_configureCodeLength);   
-    
+    RUN_TEST(test_function_configureCodeLength);
+
     UNITY_END();
-    
+
     return 0;
 }

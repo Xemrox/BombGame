@@ -2,7 +2,7 @@
 //#include <HardwareSerial.h>
 #include "BombMachine.h"
 
-BombMachine bomb = BombMachine();
+BombMachine bomb = BombMachine("8715003*");
 
 void setup() {
   //Serial.begin(9600);
