@@ -27,7 +27,7 @@ bool BombMachine::allowStateChange(BombState newState) const
     case Disarming: //disarming -> disarmed || locked || exploded
         return (newState == Disarmed || newState == LockedDisarming || newState == Exploded);
     case LockedDisarming:
-        return (newState == PrepareDisarming ||newState == Disarmed);
+        return (newState == PrepareDisarming || newState == Disarmed);
     case Disarmed: //disarmed -> idle
         return (newState == Idle);
     case Exploded: //exploded -> idle
@@ -53,7 +53,7 @@ void BombMachine::setState(BombState newState)
         return;
 
     //instead of disarming to lock -> disarm bomb!
-    if(this->state == BombState::Disarming && newState == BombState::LockedDisarming && this->activeFeatures & BombFeature::ReverseBomb)
+    if (this->state == BombState::Disarming && newState == BombState::LockedDisarming && this->activeFeatures & ReverseBomb)
         newState = BombState::Disarmed;
 
     //TODO maybe notify about change for components here...
@@ -70,7 +70,7 @@ void BombMachine::setState(BombState newState)
     case BombState::LockedDisarming:
         this->setActionTimer();
         this->strikeCount++;
-        if (this->strikeCount >= this->maxStrikeCount)
+        if (this->strikeCount >= this->maximumStrikeCount)
             //you failed!!
             this->state = BombState::Exploded;
         break;
@@ -100,13 +100,13 @@ void BombMachine::setActionTimer()
         break;
     case BombState::Armed:
         this->actionTimer = this->bombTime;
-        if (this->activeFeatures & BombFeature::Quick)
+        if (this->activeFeatures & Quick)
             mod -= this->actionTimer / 10;
-        if (this->activeFeatures & BombFeature::ExtraQuick)
+        if (this->activeFeatures & ExtraQuick)
             mod -= this->actionTimer / 10;
-        if (this->activeFeatures & BombFeature::Slow)
+        if (this->activeFeatures & Slow)
             mod += this->actionTimer / 10;
-        if (this->activeFeatures & BombFeature::ExtraSlow)
+        if (this->activeFeatures & ExtraSlow)
             mod += this->actionTimer / 10;
         break;
     case BombState::LockedArming:
@@ -237,7 +237,7 @@ void BombMachine::prepareCode()
     //terminate code!
     this->bombCode[this->bombCodeSize] = '\0';
 
-    static const char[11] rndBase = "0123456789";
+    const char *rndBase = "0123456789";
     //int rnd = random(0, 10);
 
     int effectiveCodeSize = this->bombCodeSize;
@@ -340,11 +340,11 @@ void BombMachine::attemptConfigure()
         //0 -> InterruptKeypad
         if (this->keypadBuffer[2] > 0)
         {
-            this->activeFeatures |= BombFeature::InterruptKeypad;
+            this->activeFeatures |= InterruptKeypad;
         }
         else
         {
-            this->activeFeatures ^= this->activeFeatures & BombFeature::InterruptKeypad;
+            this->activeFeatures ^= this->activeFeatures & InterruptKeypad;
         }
 
         if (memcmp(this->keypadBuffer, bombTimer, 2) == 0)
@@ -374,14 +374,14 @@ void BombMachine::tick(unsigned long delta)
     case BombState::PrepareDisarming:
     {
         //display time expired -> move to next state
-        this->setState(this->state + 1);
+        this->setState(static_cast<BombState>(static_cast<int>(this->state) + 1));
         break;
     }
     case BombState::LockedArming:
     case BombState::LockedDisarming:
     {
         //lockdown over -> move to previous prepare state
-        this->setState(this->state - 2);
+        this->setState(static_cast<BombState>(static_cast<int>(this->state) - 2));
         break;
     }
     default:
@@ -392,17 +392,17 @@ void BombMachine::tick(unsigned long delta)
 const BombMachine::BombCode BombMachine::bombCodes[] = {
     //{"8715003"},
     //{"00000000"},
-    {"99999999", BombMachine::BombFeature::ExtraFastCode},
+    {"99999999", ExtraFastCode},
     //{"911"},
     //{"8426"},
     //{"9713"},
     //{"84269713"},
     //{"2206"},
     //{"220694"},
-    {"22061994", BombMachine::BombFeature::FastCode || BombMachine::BombFeature::AllSilent},
-    {"31415926", BombMachine::BombFeature::ExtraQuick || BombMachine::BombFeature::SilentArm || BombMachine::BombFeature::Noisy || BombMachine::BombFeature::FastCode},
-    {"3141592", BombMachine::BombFeature::ExtraQuick || BombMachine::BombFeature::ExtraNoisy},
-    {"314159", BombMachine::BombFeature::Quick || BombMachine::BombFeature::Noisy},
+    {"22061994", FastCode | AllSilent},
+    {"31415926", ExtraQuick | SilentArm | Noisy | FastCode},
+    {"3141592", ExtraQuick | ExtraNoisy},
+    {"314159", Quick | Noisy},
     //{"31415"},
     //{"3141"},
     //{"9000"},

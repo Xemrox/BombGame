@@ -3,11 +3,9 @@
 #include <unity.h>
 #include <time.h>
 #include <iostream>
-
+#include <random>
 
 BombMachine* bomb;
-
-#include <random>
 
 void setUp(void) {
     srandom(time(NULL));
@@ -63,11 +61,11 @@ void test_function_armingBombState() {
     TEST_ASSERT_EQUAL_INT32(BombMachine::Arming, bomb->getState());
 
     BombMachine::BombState allowedTransitions[] = {
-        BombMachine::BombState::Idle,
         BombMachine::BombState::Armed,
         BombMachine::BombState::LockedArming
     };
     BombMachine::BombState disallowedTransitions[] = {
+        BombMachine::BombState::Idle,
         BombMachine::BombState::Disarmed,
         BombMachine::BombState::Disarming,
         BombMachine::BombState::Disarming,
@@ -76,8 +74,8 @@ void test_function_armingBombState() {
         BombMachine::BombState::Configuring,
         BombMachine::BombState::Configuration
     };
-    checkStateChanges(allowedTransitions, 3, true);
-    checkStateChanges(disallowedTransitions, 5, false);
+    checkStateChanges(allowedTransitions, 2, true);
+    checkStateChanges(disallowedTransitions, 6, false);
 }
 
 void test_function_inputNormal() {

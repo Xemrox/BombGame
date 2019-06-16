@@ -26,25 +26,25 @@ public:
         Exploded
     };
 
-    enum BombFeature
-    {
-        SilentArm = 1 << 0,
-        SilentDisarm = 1 << 2,
-        AllSilent = 3 << 0, //0+1
-        Quick = 1 << 3,
-        ExtraQuick = 3 << 3, //3+4
-        Slow = 1 << 5,
-        ExtraSlow = 3 << 5, //5+6
-        ReverseSound = 1 << 7,
-        Noisy = 1 << 8,
-        ExtraNoisy = 3 << 8, //8+9
+    //enum BombFeature : int
+    //{
+        #define SilentArm 1 << 0
+        #define SilentDisarm 1 << 1
+        #define AllSilent 3 << 0 //0+1
+        #define Quick 1 << 3
+        #define ExtraQuick 3 << 3 //3+4
+        #define Slow 1 << 5
+        #define ExtraSlow 3 << 5 //5+6
+        #define ReverseSound 1 << 7
+        #define Noisy 1 << 8
+        #define ExtraNoisy 3 << 8 //8+9
 
-        InterruptKeypad = 1 << 10,
-        FastCode = 1 << 11,
-        ExtraFastCode = 3 << 11, //11+12
+        #define InterruptKeypad 1 << 10
+        #define FastCode 1 << 11
+        #define ExtraFastCode 3 << 11 //11+12
 
-        ReverseBomb = 1 << 13
-    };
+        #define ReverseBomb 1 << 13
+    //};
 
     const char *const getKeyBuffer() const;
     int getKeyBufferSize() const;
@@ -74,7 +74,7 @@ public:
     //gets called every few ticks
     void tick(unsigned long delta);
 
-    BombMachine(const char[9] configCode) : configCode(configCode)
+    BombMachine(const char configCode[9]) : configCode(configCode)
     {
         this->keypadBuffer = new char[this->keypadBufferSize];
         for (int i = 0; i < this->keypadBufferSize; i++)
@@ -86,9 +86,9 @@ public:
 private:
     struct BombCode
     {
-        const char code[9];
-        BombFeatures features;
-        BombCode(const char[9] code, BombFeature features) : code(code), features(features{};
+        const char *code;
+        const int features;
+        BombCode(const char code[9], int features) : code(code), features(features){};
     };
 
     void flushKeypad();
@@ -105,7 +105,7 @@ private:
     unsigned int bombCodeSize = 8;
     char *bombCode;
 
-    BombFeature activeFeatures;
+    int activeFeatures;
 
     unsigned long maximumStrikeCount = 3;
 
@@ -119,5 +119,6 @@ private:
     unsigned int strikeCount = 0;
     unsigned long actionTimer = 0;
 };
+
 
 #endif
