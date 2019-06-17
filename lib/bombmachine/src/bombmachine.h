@@ -74,6 +74,9 @@ public:
     //gets called every few ticks
     void tick(unsigned long delta);
 
+    unsigned long getRemainingBombTime() const;
+    unsigned long getTotalBombTime() const;
+
     BombMachine(const char configCode[9]) : configCode(configCode)
     {
         this->keypadBuffer = new char[this->keypadBufferSize];
@@ -118,6 +121,7 @@ private:
 
     unsigned int strikeCount = 0;
     unsigned long actionTimer = 0;
+    unsigned long backgroundTimer = 0;
 };
 
 

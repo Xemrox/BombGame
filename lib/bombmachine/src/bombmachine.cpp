@@ -80,10 +80,9 @@ void BombMachine::setState(BombState newState)
     }
     case BombState::Armed:
     {
-        //todo restore from previous armed state!!
+        if (this->state == BombState::Arming)
+            this->strikeCount = 0;
         this->setActionTimer(newState);
-        //reset strike counter
-        this->strikeCount = 0;
         break;
     }
     default:
@@ -98,27 +97,27 @@ void BombMachine::setState(BombState newState)
 
 void BombMachine::setActionTimer(BombMachine::BombState newState)
 {
-    long mod = 0;
     switch (newState)
     {
     case BombState::PrepareArming:
         this->actionTimer = this->armDisplayTime;
         break;
     case BombState::PrepareDisarming:
+        //shift current bomb time to backup
+        this->backgroundTimer = this->actionTimer;
         this->actionTimer = this->disarmDisplayTime;
         break;
     case BombState::Armed:
+        //only set the timer if we come from arming
         if (this->state == BombState::Arming)
         {
-            this->actionTimer = this->bombTime;
-            if (this->activeFeatures & Quick)
-                mod -= this->actionTimer / 10;
-            if (this->activeFeatures & ExtraQuick)
-                mod -= this->actionTimer / 10;
-            if (this->activeFeatures & Slow)
-                mod += this->actionTimer / 10;
-            if (this->activeFeatures & ExtraSlow)
-                mod += this->actionTimer / 10;
+            this->actionTimer = this->getTotalBombTime();
+        }
+        else
+        {
+            //otherwise restore timer
+            this->actionTimer = this->backgroundTimer;
+            this->backgroundTimer = 0;
         }
         break;
     case BombState::LockedArming:
@@ -127,7 +126,39 @@ void BombMachine::setActionTimer(BombMachine::BombState newState)
     default:
         break;
     }
-    this->actionTimer += mod;
+}
+
+unsigned long BombMachine::getTotalBombTime() const
+{
+    long mod = 0;
+    unsigned long timer = this->bombTime;
+    if (this->activeFeatures & Quick)
+        mod -= timer / 10;
+    if (this->activeFeatures & ExtraQuick)
+        mod -= timer / 10;
+    if (this->activeFeatures & Slow)
+        mod += timer / 10;
+    if (this->activeFeatures & ExtraSlow)
+        mod += timer / 10;
+
+    if (this->actionTimer > mod && mod < 0)
+    {
+        //lower limit for modifications
+        return 100;
+    }
+    else
+    {
+        return timer + mod;
+    }
+}
+
+unsigned long BombMachine::getRemainingBombTime() const
+{
+    if (this->state == BombState::Armed)
+        return this->actionTimer;
+    if (this->state == BombState::PrepareDisarming || this->state == BombState::Disarming || this->state == BombState::LockedDisarming)
+        return this->backgroundTimer;
+    return 0;
 }
 
 BombMachine::BombState BombMachine::getState() const
@@ -375,11 +406,26 @@ void BombMachine::attemptConfigure()
 
 void BombMachine::tick(unsigned long delta)
 {
-    if (this->actionTimer > 0)
-        this->actionTimer -= delta;
+    //watch out for underflow
+    if (this->backgroundTimer > delta)
+    {
+        this->backgroundTimer -= delta;
+    }
+    else if (this->backgroundTimer <= delta)
+    {
+        this->backgroundTimer = 0;
+    }
 
-    if (this->actionTimer > 0)
-        return;
+    //watch out for underflow
+    if (this->actionTimer > delta)
+    {
+        this->actionTimer -= delta;
+        return; //decrement timer but stop here
+    }
+    else if (this->actionTimer <= delta)
+    {
+        this->actionTimer = 0;
+    }
 
     switch (this->state)
     {
@@ -390,17 +436,40 @@ void BombMachine::tick(unsigned long delta)
         break;
     }
     case BombState::PrepareArming:
-    case BombState::PrepareDisarming:
     {
-        //display time expired -> move to next state
-        this->setState(static_cast<BombState>(static_cast<int>(this->state) + 1));
+        this->setState(BombState::Arming);
         break;
     }
     case BombState::LockedArming:
-    case BombState::LockedDisarming:
     {
         //lockdown over -> move to previous prepare state
-        this->setState(static_cast<BombState>(static_cast<int>(this->state) - 2));
+        this->setState(BombState::PrepareArming);
+        break;
+    }
+    case BombState::PrepareDisarming:
+    {
+        //display time expired -> move to next state
+        if (this->backgroundTimer == 0)
+        {
+            this->setState(BombState::Exploded);
+        }
+        else
+        {
+            this->setState(BombState::Disarming);
+        }
+        break;
+    }
+    case BombState::LockedDisarming:
+    {
+        if (this->backgroundTimer == 0)
+        {
+            this->setState(BombState::Exploded);
+        }
+        else
+        {
+            //lockdown over -> move to previous prepare state
+            this->setState(BombState::PrepareDisarming);
+        }
         break;
     }
     default:
