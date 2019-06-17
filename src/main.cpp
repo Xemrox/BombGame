@@ -69,34 +69,20 @@ void setup()
   lastDisplayUpdate = millis();
 }
 
-unsigned int frq = 0;
+void handleKeypad();
+void handleButton();
 
 void loop()
 {
-  tone(A05, 6000, 1000);
+  //tone(A05, 6000, 1000);
   //analogWrite(A05, 1023);
   //analogWrite(A05, 0);
 
   //char c = keypad.waitForKey();
   //lc.setChar(0, 0, c, false);
-  if (keypad.getKeys()) //something changed
-  {
-    for (int i = 0; i < LIST_MAX; i++)
-    {
-      if (keypad.key[i].kstate == PRESSED && keypad.key[i].stateChanged)
-      {
-        //lc.setChar(0, 0, keypad.key[i].kchar, false);
-        bomb.inputKey(keypad.key[i].kchar);
-        break;
-      }
-    }
-  }
-  bool buttonPress = !digitalRead(D02); //LOW active
-  if (buttonPress)
-  {
-    bomb.pressButton();
-    //lc.clearDisplay(0);
-  }
+  handleKeypad();
+  handleButton();
+
   unsigned long updateMillis = millis();
   if (updateMillis - lastDisplayUpdate < 100UL)
     return;
@@ -212,5 +198,31 @@ void loop()
     lc.setChar(0, 8, 'U', true);
     break;
   }
+  }
+}
+
+void handleKeypad() {
+  if (keypad.getKeys()) //something changed
+  {
+    for (int i = 0; i < LIST_MAX; i++)
+    {
+      if (keypad.key[i].kstate == PRESSED && keypad.key[i].stateChanged)
+      {
+        //lc.setChar(0, 0, keypad.key[i].kchar, false);
+        bomb.inputKey(keypad.key[i].kchar);
+        break;
+      }
+    }
+  }
+}
+
+bool previousButtonState = false;
+void handleButton() {
+  bool buttonPress = !digitalRead(D02); //LOW active
+  if(buttonPress != previousButtonState) {
+    previousButtonState = buttonPress;
+    if(buttonPress) {
+      bomb.pressButton();
+    }
   }
 }
