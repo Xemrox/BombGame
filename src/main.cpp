@@ -22,10 +22,10 @@
 
 #define Button D02
 
-#define A7 //
-#define A6 //
-#define A05 19//
-#define A4 //
+#define A7    //
+#define A6    //
+#define A5 19 //
+#define A4    //
 
 //data / clk / cs
 LedControl lc = LedControl(D12, D10, D11, 1);
@@ -44,7 +44,9 @@ Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
 
 BombMachine bomb = BombMachine("8715003*");
 
-unsigned long lastDisplayUpdate = 0;
+unsigned long tickResolution = 100; //ms
+unsigned long lastTickUpdate = 0;
+
 bool idleAnim = false;
 
 void setup()
@@ -52,7 +54,7 @@ void setup()
   delay(100); //boot
   //wakeup call
   lc.shutdown(0, false);
-  //Set the brightness to a medium values
+  //Set the brightness to a high values
   lc.setIntensity(0, 14);
   //and clear the display
   lc.clearDisplay(0);
@@ -61,34 +63,94 @@ void setup()
   pinMode(Button, INPUT);
   //pullup
   digitalWrite(Button, 1);
+  pinMode(A5, OUTPUT);
 
-  //randomSeed(analogRead(0));
-
-  pinMode(A05, OUTPUT);
-
-  lastDisplayUpdate = millis();
+  randomSeed(analogRead(0));
 }
 
-void handleKeypad();
-void handleButton();
+bool handleKeypad();
+bool handleButton();
+void handleDisplay(bool);
 
 void loop()
 {
-  //tone(A05, 6000, 1000);
-  //analogWrite(A05, 1023);
-  //analogWrite(A05, 0);
+  //tone(A5, 6000, 1000);
+  //analogWrite(A5, 1023);
+  //analogWrite(A5, 0);
 
   //char c = keypad.waitForKey();
   //lc.setChar(0, 0, c, false);
-  handleKeypad();
-  handleButton();
+  bool keyUpdate = handleKeypad();
+  bool buttonUpdate = handleButton();
+
+  bool externalUpdate = keyUpdate || buttonUpdate;
+
+  handleDisplay(externalUpdate);
 
   unsigned long updateMillis = millis();
-  if (updateMillis - lastDisplayUpdate < 100UL)
+  if (updateMillis - lastTickUpdate < tickResolution && !externalUpdate)
     return;
-  bomb.tick(updateMillis - lastDisplayUpdate);
 
-  lastDisplayUpdate = millis();
+  bomb.tick(updateMillis - lastTickUpdate);
+  lastTickUpdate = updateMillis;
+}
+
+bool handleKeypad()
+{
+  if (keypad.getKeys()) //something changed
+  {
+    for (int i = 0; i < LIST_MAX; i++)
+    {
+      if (keypad.key[i].kstate == PRESSED && keypad.key[i].stateChanged)
+      {
+        //lc.setChar(0, 0, keypad.key[i].kchar, false);
+        bomb.inputKey(keypad.key[i].kchar);
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool previousButtonState = false;
+unsigned long buttonHoldTime = 1000;
+unsigned long lastButtonChange = 0;
+bool handleButton()
+{
+  bool buttonPress = !digitalRead(D02); //LOW active
+  //debounce button change
+  if (buttonPress != previousButtonState)
+  {
+    previousButtonState = buttonPress;
+    if (buttonPress)
+    {
+      lastButtonChange = millis();
+      //bomb.pressButton();
+      //return true;
+    }
+  }
+  else
+  {
+    //no change but maybe we hold the button
+    if (buttonPress && millis() - lastButtonChange > buttonHoldTime)
+    {
+      bomb.pressButton();
+      return true;
+    }
+  }
+  return false;
+}
+
+unsigned long lastDisplayUpdate = 0;
+unsigned long displayUpdateResolution = 5000;
+void handleDisplay(bool forceUpdate)
+{
+  //todo handle animations
+
+  unsigned long updateMillis = millis();
+  if (updateMillis - lastDisplayUpdate < displayUpdateResolution && !forceUpdate)
+    return;
+  lastDisplayUpdate = updateMillis;
 
   switch (bomb.getState())
   {
@@ -128,12 +190,6 @@ void loop()
     {
       lc.setChar(0, 7 - i, code[i], false);
     }
-
-
-    /*for (int i = bomb.getBombCodeSize() - 1; i < 8; i++)
-    {
-      lc.setChar(0, 7 - i, ' ', false);
-    }*/
     break;
   }
   case BombMachine::BombState::Disarming:
@@ -143,31 +199,30 @@ void loop()
     const char *code = bomb.getKeyBuffer();
     for (int i = 0; i < bomb.getKeyPosition(); i++)
     {
-      if (code[i] == '\0')
-      {
-        lc.setChar(0, 7 - i, ' ', false);
-      }
-      else
-      {
-        lc.setChar(0, 7 - i, code[i], true);
-      }
+      lc.setChar(0, 7 - i, code[i], true);
     }
-    /*for (int i = bomb.getKeyPosition(); i < 8; i++)
-    {
-      lc.setChar(0, 7 - i, ' ', false);
-    }*/
     break;
   }
   case BombMachine::BombState::Configuring:
   {
-    //lc.clearDisplay(0);
-    lc.setChar(0, 7, 'C', false);
+    lc.clearDisplay(0);
+    lc.clearDisplay(0);
+    const char *code = bomb.getKeyBuffer();
+    for (int i = 0; i < bomb.getKeyPosition(); i++)
+    {
+      lc.setChar(0, 7 - i, code[i], true);
+    }
+    lc.setChar(0, 0, 'C', false);
     break;
   }
   case BombMachine::BombState::Configuration:
   {
-    //lc.clearDisplay(0);
-    lc.setChar(0, 7, 'C', true);
+    lc.clearDisplay(0);
+    const char *code = bomb.getKeyBuffer();
+    for (int i = 0; i < bomb.getKeyPosition(); i++)
+    {
+      lc.setChar(0, 7 - i, code[i], true);
+    }
     break;
   }
   case BombMachine::BombState::Armed:
@@ -189,40 +244,14 @@ void loop()
   case BombMachine::BombState::Exploded:
   {
     for (int i = 0; i < 8; i++)
-    lc.setChar(0, 7, 'E', true);
+      lc.setChar(0, i, 'E', true);
     break;
   }
   default:
   {
     for (int i = 0; i < 8; i++)
-    lc.setChar(0, 8, 'U', true);
+      lc.setChar(0, i, 'U', true);
     break;
   }
-  }
-}
-
-void handleKeypad() {
-  if (keypad.getKeys()) //something changed
-  {
-    for (int i = 0; i < LIST_MAX; i++)
-    {
-      if (keypad.key[i].kstate == PRESSED && keypad.key[i].stateChanged)
-      {
-        //lc.setChar(0, 0, keypad.key[i].kchar, false);
-        bomb.inputKey(keypad.key[i].kchar);
-        break;
-      }
-    }
-  }
-}
-
-bool previousButtonState = false;
-void handleButton() {
-  bool buttonPress = !digitalRead(D02); //LOW active
-  if(buttonPress != previousButtonState) {
-    previousButtonState = buttonPress;
-    if(buttonPress) {
-      bomb.pressButton();
-    }
   }
 }
