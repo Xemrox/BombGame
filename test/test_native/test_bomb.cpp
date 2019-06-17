@@ -19,6 +19,12 @@ void tearDown(void) {
 
 void checkStateChanges(BombMachine::BombState changes[], int size, bool allowed) {
     for(int i = 0; i < size; i++) {
+        /*bool result = bomb->allowStateChange([changes[i]]);
+        if(allowed && !result) {
+
+        } elseif(!allowed && result) {
+            TEST_FAIL_MESSAGE();
+        }*/
         if(allowed) {
             TEST_ASSERT_TRUE(bomb->allowStateChange(changes[i]));
         } else {

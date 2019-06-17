@@ -77,7 +77,7 @@ public:
     BombMachine(const char configCode[9]) : configCode(configCode)
     {
         this->keypadBuffer = new char[this->keypadBufferSize];
-        for (int i = 0; i < this->keypadBufferSize; i++)
+        for (unsigned int i = 0; i < this->keypadBufferSize; i++)
         {
             this->keypadBuffer[i] = '\0';
         }
@@ -102,19 +102,19 @@ private:
     unsigned int keypadBufferPosition = 0;
     char *keypadBuffer;
 
-    unsigned int bombCodeSize = 8;
+    unsigned int bombCodeSize = 3;
     char *bombCode;
 
     int activeFeatures;
 
-    unsigned long maximumStrikeCount = 3;
+    unsigned long maximumStrikeCount = 2;
 
-    void setActionTimer();
+    void setActionTimer(BombState newState);
 
-    unsigned long armDisplayTime = 5 * 1000;
-    unsigned long disarmDisplayTime = 5 * 1000;
-    unsigned long bombTime = 5 * 60 * 1000;
-    unsigned long lockdownTime = 5 * 1000;
+    unsigned long int armDisplayTime = 5UL * 1000UL;
+    unsigned long int disarmDisplayTime = 5UL * 1000UL;
+    unsigned long int bombTime = 5UL * 60UL * 1000UL;
+    unsigned long int lockdownTime = 5UL * 1000UL;
 
     unsigned int strikeCount = 0;
     unsigned long actionTimer = 0;

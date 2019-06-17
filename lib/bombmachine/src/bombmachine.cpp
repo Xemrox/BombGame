@@ -1,8 +1,9 @@
 
 #include "bombmachine.h"
-#include <random>
+//#include <random>
 #include <string.h>
-#include <iostream>
+#include "Arduino.h"
+//#include <iostream>
 
 bool BombMachine::allowStateChange(BombState newState) const
 {
@@ -27,7 +28,7 @@ bool BombMachine::allowStateChange(BombState newState) const
     case Disarming: //disarming -> disarmed || locked || exploded
         return (newState == Disarmed || newState == LockedDisarming || newState == Exploded);
     case LockedDisarming:
-        return (newState == PrepareDisarming || newState == Disarmed);
+        return (newState == PrepareDisarming || newState == Disarmed || newState == Exploded);
     case Disarmed: //disarmed -> idle
         return (newState == Idle);
     case Exploded: //exploded -> idle
@@ -41,7 +42,7 @@ bool BombMachine::allowStateChange(BombState newState) const
 void BombMachine::flushKeypad()
 {
     this->keypadBufferPosition = 0;
-    for (int i = 0; i < this->keypadBufferSize; i++)
+    for (unsigned int i = 0; i < this->keypadBufferSize; i++)
     {
         this->keypadBuffer[i] = '\0';
     }
@@ -57,40 +58,48 @@ void BombMachine::setState(BombState newState)
         newState = BombState::Disarmed;
 
     //TODO maybe notify about change for components here...
-    this->state = newState;
 
-    switch (this->state)
+    switch (newState)
     {
     case BombState::PrepareArming:
     case BombState::PrepareDisarming:
-        this->setActionTimer();
+    {
+        this->setActionTimer(newState);
         this->prepareCode();
         break;
+    }
     case BombState::LockedArming:
     case BombState::LockedDisarming:
-        this->setActionTimer();
+    {
+        this->setActionTimer(newState);
         this->strikeCount++;
         if (this->strikeCount >= this->maximumStrikeCount)
             //you failed!!
             this->state = BombState::Exploded;
         break;
+    }
     case BombState::Armed:
-        this->setActionTimer();
+    {
+        //todo restore from previous armed state!!
+        this->setActionTimer(newState);
         //reset strike counter
         this->strikeCount = 0;
         break;
+    }
     default:
         break;
     }
+
+    this->state = newState;
 
     //flush keypad after each state change
     this->flushKeypad();
 }
 
-void BombMachine::setActionTimer()
+void BombMachine::setActionTimer(BombMachine::BombState newState)
 {
     long mod = 0;
-    switch (this->state)
+    switch (newState)
     {
     case BombState::PrepareArming:
         this->actionTimer = this->armDisplayTime;
@@ -99,15 +108,18 @@ void BombMachine::setActionTimer()
         this->actionTimer = this->disarmDisplayTime;
         break;
     case BombState::Armed:
-        this->actionTimer = this->bombTime;
-        if (this->activeFeatures & Quick)
-            mod -= this->actionTimer / 10;
-        if (this->activeFeatures & ExtraQuick)
-            mod -= this->actionTimer / 10;
-        if (this->activeFeatures & Slow)
-            mod += this->actionTimer / 10;
-        if (this->activeFeatures & ExtraSlow)
-            mod += this->actionTimer / 10;
+        if (this->state == BombState::Arming)
+        {
+            this->actionTimer = this->bombTime;
+            if (this->activeFeatures & Quick)
+                mod -= this->actionTimer / 10;
+            if (this->activeFeatures & ExtraQuick)
+                mod -= this->actionTimer / 10;
+            if (this->activeFeatures & Slow)
+                mod += this->actionTimer / 10;
+            if (this->activeFeatures & ExtraSlow)
+                mod += this->actionTimer / 10;
+        }
         break;
     case BombState::LockedArming:
     case BombState::LockedDisarming:
@@ -153,7 +165,7 @@ void BombMachine::pressButton()
     switch (this->state)
     {
     case BombState::Idle:
-        this->setState(BombState::Arming);
+        this->setState(BombState::PrepareArming);
         break;
     case BombState::Arming:
     {
@@ -169,6 +181,11 @@ void BombMachine::pressButton()
         {
             this->setState(BombState::LockedDisarming);
         }
+        break;
+    }
+    case BombState::Armed:
+    {
+        this->setState(BombState::Disarming);
         break;
     }
     case BombState::Configuring:
@@ -248,7 +265,7 @@ void BombMachine::prepareCode()
 
     for (int i = 0; i < effectiveCodeSize; i++)
     {
-        unsigned int rnd = random() % 10;
+        unsigned int rnd = random(10);
         //std::cout << rnd << '-' << rndBase[rnd] << ' ';
         this->bombCode[i] = rndBase[rnd];
     }
@@ -260,7 +277,9 @@ bool BombMachine::matchCode() const
     if (this->keypadBufferPosition != this->bombCodeSize)
         return false;
 
-    for (int i = 0; i < this->keypadBufferPosition; i++)
+    //alternative memcmp
+
+    for (unsigned int i = 0; i < this->keypadBufferPosition; i++)
     {
         if (this->keypadBuffer[i] != this->bombCode[i])
             return false;
