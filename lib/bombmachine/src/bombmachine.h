@@ -63,10 +63,7 @@ public:
     void prepareCode();
 
     bool tryArmBomb();
-    void armBomb();
-
     bool tryDisarmBomb();
-    void disarmBomb();
 
     void attemptConfigure();
 

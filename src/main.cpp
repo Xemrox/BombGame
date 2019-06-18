@@ -70,7 +70,7 @@ void setup()
 
 bool handleKeypad();
 bool handleButton();
-void handleDisplay(bool);
+void handleDisplay(unsigned long, bool);
 
 void loop()
 {
@@ -85,9 +85,9 @@ void loop()
 
   bool externalUpdate = keyUpdate || buttonUpdate;
 
-  handleDisplay(externalUpdate);
-
   unsigned long updateMillis = millis();
+  handleDisplay(updateMillis, externalUpdate);
+
   if (updateMillis - lastTickUpdate < tickResolution && !externalUpdate)
     return;
 
@@ -113,6 +113,7 @@ bool handleKeypad()
 }
 
 bool previousButtonState = false;
+bool buttonDebounce = false;
 unsigned long buttonHoldTime = 1000;
 unsigned long lastButtonChange = 0;
 bool handleButton()
@@ -124,6 +125,7 @@ bool handleButton()
     previousButtonState = buttonPress;
     if (buttonPress)
     {
+      buttonDebounce = false;
       lastButtonChange = millis();
       //bomb.pressButton();
       //return true;
@@ -132,8 +134,9 @@ bool handleButton()
   else
   {
     //no change but maybe we hold the button
-    if (buttonPress && millis() - lastButtonChange > buttonHoldTime)
+    if (buttonPress && millis() - lastButtonChange > buttonHoldTime && !buttonDebounce)
     {
+      buttonDebounce = true;
       bomb.pressButton();
       return true;
     }
@@ -143,12 +146,27 @@ bool handleButton()
 
 unsigned long lastDisplayUpdate = 0;
 unsigned long displayUpdateResolution = 5000;
-void handleDisplay(bool forceUpdate)
+unsigned long displayAnimationResolution = 500;
+
+inline void animateIdle();
+inline void animateDisarmed();
+inline void animateExploded();
+inline void animateArmed();
+inline void animateLocked();
+
+void handleDisplay(unsigned long updateMillis, bool forceUpdate)
 {
   //todo handle animations
 
-  unsigned long updateMillis = millis();
-  if (updateMillis - lastDisplayUpdate < displayUpdateResolution && !forceUpdate)
+  bool inAnimation =
+      bomb.getState() == BombMachine::BombState::Idle ||
+      bomb.getState() == BombMachine::BombState::Disarmed ||
+      bomb.getState() == BombMachine::BombState::Exploded ||
+      bomb.getState() == BombMachine::BombState::Armed ||
+      bomb.getState() == BombMachine::BombState::LockedArming ||
+      bomb.getState() == BombMachine::BombState::LockedDisarming;
+
+  if (updateMillis - lastDisplayUpdate < displayUpdateResolution && !forceUpdate && !inAnimation)
     return;
   lastDisplayUpdate = updateMillis;
 
@@ -156,29 +174,7 @@ void handleDisplay(bool forceUpdate)
   {
   case BombMachine::BombState::Idle:
   {
-    char idle0 = ' ';
-    char idle1 = ' ';
-
-    if (idleAnim)
-    {
-      idle0 = '-';
-      idle1 = '_';
-    }
-    else
-    {
-      idle0 = '_';
-      idle1 = '-';
-    }
-    idleAnim = !idleAnim;
-
-    for (int i = 0; i < 8; i += 2)
-    {
-      lc.setChar(0, i, idle0, false);
-    }
-    for (int i = 1; i < 8; i += 2)
-    {
-      lc.setChar(0, i, idle1, false);
-    }
+    animateIdle();
     break;
   }
   case BombMachine::BombState::PrepareArming:
@@ -235,6 +231,8 @@ void handleDisplay(bool forceUpdate)
   }
   case BombMachine::BombState::Disarmed:
   {
+    animateDisarmed();
+
     for (int i = 0; i < 8; i++)
     {
       lc.setChar(0, i, 'D', true);
@@ -243,8 +241,15 @@ void handleDisplay(bool forceUpdate)
   }
   case BombMachine::BombState::Exploded:
   {
+    animateExploded();
+
     for (int i = 0; i < 8; i++)
       lc.setChar(0, i, 'E', true);
+    break;
+  }
+  case BombMachine::BombState::LockedArming:
+  case BombMachine::BombState::LockedDisarming: {
+    animateLocked();
     break;
   }
   default:
@@ -254,4 +259,44 @@ void handleDisplay(bool forceUpdate)
     break;
   }
   }
+}
+
+inline void animateIdle()
+{
+  char idle0 = ' ';
+  char idle1 = ' ';
+
+  if (idleAnim)
+  {
+    idle0 = '-';
+    idle1 = '_';
+  }
+  else
+  {
+    idle0 = '_';
+    idle1 = '-';
+  }
+  idleAnim = !idleAnim;
+
+  for (int i = 0; i < 8; i += 2)
+  {
+    lc.setChar(0, i, idle0, idleAnim);
+  }
+  for (int i = 1; i < 8; i += 2)
+  {
+    lc.setChar(0, i, idle1, !idleAnim);
+  }
+}
+
+inline void animateDisarmed() {
+
+}
+inline void animateExploded() {
+
+}
+inline void animateArmed() {
+
+}
+inline void animateLocked() {
+
 }
