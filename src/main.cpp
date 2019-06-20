@@ -118,9 +118,6 @@ void handleSpeaker()
     break;
   case BombMachine::BombState::Armed:
   {
-    unsigned long remaining = bomb.getRemainingBombTime();
-    unsigned long total = bomb.getTotalBombTime();
-
     /*unsigned long actual = total - remaining;
     long freq = map(actual, 0, total, 0, 65535);
     if (freq > 100)
@@ -153,7 +150,6 @@ void handleSpeaker()
   }
   case BombMachine::BombState::Disarmed:
   {
-    tone(A5, 50);
     break;
   }
   case BombMachine::BombState::Exploded:
@@ -260,6 +256,10 @@ void handleDisplay(unsigned long updateMillis, bool forceUpdate)
     for (unsigned int i = 0; i < bomb.getBombCodeSize(); i++)
     {
       lc.setChar(0, 7 - i, code[i], strikes > i);
+    }
+    for (unsigned int i = bomb.getBombCodeSize(); i < 7; i++)
+    {
+      lc.setChar(0, 7 - i, ' ', strikes > i);
     }
     break;
   }

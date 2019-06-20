@@ -88,6 +88,8 @@ public:
         }
     }
 
+    bool checkCodes() const;
+
 private:
     struct BombCode
     {
@@ -110,7 +112,7 @@ private:
     unsigned int bombCodeSize = 5;
     char *bombCode;
 
-    int activeFeatures;
+    int activeFeatures = 0;
 
     unsigned long maximumStrikeCount = 4;
 

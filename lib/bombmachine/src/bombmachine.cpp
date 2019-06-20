@@ -225,14 +225,13 @@ void BombMachine::pressButton()
     switch (this->state)
     {
     case BombState::Idle:
-        //strlen(code)
-        for(int i = 0; i < 0; i++) {
+        for(int i = 0; i < 10; i++) {
             BombCode bc = BombMachine::bombCodes[i];
             if(strlen(bc.code) != this->keypadBufferPosition)
                 continue;
 
             if(strcmp(bc.code, this->keypadBuffer) == 0) {
-                this->activeFeatures |= bc.features;
+                this->activeFeatures = bc.features;
             }
         }
 
@@ -310,6 +309,10 @@ void BombMachine::inputKey(const char c)
         return; //not allowed to enter more digits!
 
     this->keypadBuffer[this->keypadBufferPosition++] = c;
+}
+
+bool BombMachine::checkCodes() const {
+    return false;
 }
 
 void BombMachine::prepareCode()
