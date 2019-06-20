@@ -325,7 +325,9 @@ void handleDisplay(unsigned long updateMillis, bool forceUpdate)
 }
 
 unsigned int idleAnimStep = 0;
-const static byte idleAnimStates[] = {
+const static byte idleAnimScrollStates[] = {
+    B00000000,  //off
+
     B00001001, //mid+bottom
     B01000001, //mid+top
 
