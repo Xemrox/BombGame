@@ -367,40 +367,45 @@ inline void animateExploded()
   for (int i = 0; i < 8; i++)
     lc.setChar(0, i, 'E', true);
 }
+unsigned int armedAnimStep = 0;
 const static byte armedAnimStates[] = {
-    B00000111,
-    B00000001,
-    B00110001,
+    B01100000,
+    B00001100,
 };
 inline void animateArmed()
 {
+  animationSpeed = 100;
   lc.clearDisplay(0);
   lc.setRow(0, 5, B00001111); //t
-  lc.setChar(0, 4, '-', true);
+  lc.setChar(0, 4, '-', false);
 
   unsigned long remBombTime = bomb.getRemainingBombTime() / 1000UL;
 
   unsigned long positions = log10(remBombTime) + 1;
+  if ( remBombTime == 0 ) {
+     positions = 0;
+  }
   unsigned long currentPosition = remBombTime;
 
   if ( positions == 1 ){
-    lc.setDigit(0, 3, (byte) 0, true);
-    lc.setDigit(0, 2, (byte) 0, true);
+    lc.setDigit(0, 3, (byte) 0, false);
+    lc.setDigit(0, 2, (byte) 0, false);
   } 
   if ( positions == 2 ){
-    lc.setDigit(0, 3, (byte) 0, true);
+    lc.setDigit(0, 3, (byte) 0, false);
   }
 
   for (unsigned long i = 0; i < positions; i++ )
   {
     unsigned long currentDigit = currentPosition % 10UL;
-    lc.setDigit(0, 1+i, (byte) currentDigit, true);
+    lc.setDigit(0, 1+i, (byte) currentDigit, false);
     currentPosition = currentPosition / 10UL;
   }
 
-    lc.setRow(0, 7, armedAnimStates[0]);
-    lc.setRow(0, 6, armedAnimStates[1]);
-    lc.setRow(0, 0, armedAnimStates[2]);
+    lc.setRow(0, 7, armedAnimStates[armedAnimStep]);
+    lc.setRow(0, 0, armedAnimStates[armedAnimStep]);
+
+    armedAnimStep = ( (armedAnimStep +1 ) % 2);
 }
 unsigned int lockedAnimStep = 0;
 const static byte lockedAnimStates[] = {
