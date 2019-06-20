@@ -433,12 +433,10 @@ inline void animateArmed()
   lc.setRow(0, 5, B00001111); //t
   lc.setChar(0, 4, '-', true);
 
-  int remBombTime = bomb.getRemainingBombTime() / 1000;
+  unsigned long remBombTime = bomb.getRemainingBombTime() / 1000UL;
 
-
-
-  int positions = log10(remBombTime);
-  int currentPosition = positions;
+  unsigned long positions = log10(remBombTime) + 1;
+  unsigned long currentPosition = remBombTime;
 
   if ( positions == 1 ){
     lc.setDigit(0, 3, (byte) 0, true);
@@ -448,11 +446,11 @@ inline void animateArmed()
     lc.setDigit(0, 3, (byte) 0, true);
   }
 
-  for (int i = 0; i < positions; i++ )
+  for (unsigned long i = 0; i < positions; i++ )
   {
-    int currentDigit = currentPosition % 10;
+    unsigned long currentDigit = currentPosition % 10UL;
     lc.setDigit(0, 1+i, (byte) currentDigit, true);
-    currentPosition = currentPosition / 10;
+    currentPosition = currentPosition / 10UL;
   }
 
     lc.setRow(0, 7, armedAnimStates[0]);
