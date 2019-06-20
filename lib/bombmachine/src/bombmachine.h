@@ -28,18 +28,19 @@ public:
 
     //enum BombFeature : int
     //{
-        #define SilentArm 1 << 0
-        #define SilentDisarm 1 << 1
-        #define AllSilent 3 << 0 //0+1
+        //#define SilentArm 1 << 0
+        //#define SilentDisarm 1 << 1
+        //#define AllSilent 3 << 0 //0+1
         #define Quick 1 << 3
         #define ExtraQuick 3 << 3 //3+4
         #define Slow 1 << 5
         #define ExtraSlow 3 << 5 //5+6
-        #define ReverseSound 1 << 7
-        #define Noisy 1 << 8
-        #define ExtraNoisy 3 << 8 //8+9
+        
+        //#define ReverseSound 1 << 7
+        //#define Noisy 1 << 8
+        //#define ExtraNoisy 3 << 8 //8+9
 
-        #define InterruptKeypad 1 << 10
+        //#define InterruptKeypad 1 << 10
         #define FastCode 1 << 11
         #define ExtraFastCode 3 << 11 //11+12
 
@@ -75,6 +76,8 @@ public:
     unsigned long getTotalBombTime() const;
 
     unsigned long getRemainingActionTime() const;
+
+    unsigned int getStrikeCount() const;
 
     BombMachine(const char configCode[9], void (*changeHandler)(void)) : configCode(configCode)
     {
@@ -116,7 +119,7 @@ private:
     unsigned long int armDisplayTime = 2UL * 1000UL;
     unsigned long int disarmDisplayTime = 2UL * 1000UL;
     unsigned long int bombTime = 1UL * 60UL * 1000UL;
-    unsigned long int lockdownTime = 10UL * 1000UL;
+    unsigned long int lockdownTime = 15UL * 1000UL;
 
     unsigned int strikeCount = 0;
     unsigned long actionTimer = 0;

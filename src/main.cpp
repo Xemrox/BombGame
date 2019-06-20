@@ -254,10 +254,12 @@ void handleDisplay(unsigned long updateMillis, bool forceUpdate)
   case BombMachine::BombState::PrepareDisarming:
   {
     lc.clearDisplay(0);
+    unsigned int strikes = bomb.getStrikeCount();
+
     const char *code = bomb.getBombCode();
-    for (int i = 0; i < bomb.getBombCodeSize(); i++)
+    for (unsigned int i = 0; i < bomb.getBombCodeSize(); i++)
     {
-      lc.setChar(0, 7 - i, code[i], false);
+      lc.setChar(0, 7 - i, code[i], strikes > i);
     }
     break;
   }
@@ -265,6 +267,7 @@ void handleDisplay(unsigned long updateMillis, bool forceUpdate)
   case BombMachine::BombState::Arming:
   {
     lc.clearDisplay(0);
+
     const char *code = bomb.getKeyBuffer();
     for (int i = 0; i < bomb.getKeyPosition(); i++)
     {
@@ -432,7 +435,6 @@ inline void animateLocked()
     lockDownTime = 0;
   } else if(lockDownTime > 1000) {
     lockDownTime /= 1000UL;
-    lockDownTime += 1;
   } else {
     lockDownTime = 0;
   }
