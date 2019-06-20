@@ -77,7 +77,6 @@ void BombMachine::setState(BombState newState)
     case BombState::LockedArming:
     case BombState::LockedDisarming:
     {
-        this->setActionTimer(newState);
 
         if (newState == BombState::LockedArming)
             break;
@@ -90,8 +89,6 @@ void BombMachine::setState(BombState newState)
     }
     case BombState::Armed:
     {
-        if (this->state == BombState::Arming)
-            this->strikeCount = 0;
         break;
     }
     default:
@@ -135,6 +132,12 @@ void BombMachine::setActionTimer(BombMachine::BombState newState)
     case BombState::LockedDisarming:
     {
         this->actionTimer = this->lockdownTime;
+        break;
+    }
+    case BombState::Disarmed:
+    case BombState::Exploded:
+    {
+        this->bombTimer = 0;
         break;
     }
     default:
