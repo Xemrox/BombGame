@@ -33,7 +33,7 @@ bool BombMachine::allowStateChange(BombState newState) const
     case Disarming: //disarming -> disarmed || locked || exploded
         return (newState == Disarmed || newState == LockedDisarming || newState == Exploded);
     case LockedDisarming:
-        return (newState == PrepareDisarming || newState == Exploded);
+        return (newState == Armed || newState == Exploded);
     case Disarmed: //disarmed -> idle
         return (newState == Idle);
     case Exploded: //exploded -> idle
@@ -186,6 +186,10 @@ unsigned long BombMachine::getRemainingActionTime() const {
     return this->actionTimer;
 }
 
+unsigned int BombMachine::getStrikeCount() const {
+    return this->strikeCount;
+}
+
 BombMachine::BombState BombMachine::getState() const
 {
     return this->state;
@@ -211,7 +215,7 @@ const char *const BombMachine::getBombCode() const
     return this->bombCode;
 }
 
-int BombMachine::getBombCodeSize() const
+unsigned int BombMachine::getBombCodeSize() const
 {
     return this->bombCodeSize;
 }
@@ -221,6 +225,17 @@ void BombMachine::pressButton()
     switch (this->state)
     {
     case BombState::Idle:
+        //strlen(code)
+        for(int i = 0; i < 0; i++) {
+            BombCode bc = BombMachine::bombCodes[i];
+            if(strlen(bc.code) != this->keypadBufferPosition)
+                continue;
+
+            if(strcmp(bc.code, this->keypadBuffer) == 0) {
+                this->activeFeatures |= bc.features;
+            }
+        }
+
         this->setState(BombState::PrepareArming);
         break;
     case BombState::Arming:
@@ -308,7 +323,7 @@ void BombMachine::prepareCode()
     //terminate code!
     this->bombCode[this->bombCodeSize] = '\0';
 
-    const char *rndBase = "0123456789";
+    const char rndBase[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'};
 
     int effectiveCodeSize = this->bombCodeSize;
     if (this->activeFeatures & FastCode)
@@ -378,15 +393,36 @@ bool BombMachine::tryDisarmBomb()
 void BombMachine::attemptConfigure()
 {
     static const char *codeLength = "0*";
-    static const char *armMode = "1*";
-    static const char *bombTimer = "2*";
+    static const char *bombTimer = "1*";
+    static const char *displayTimer = "2*";
+    static const char *lockdownTimer = "3*";
+    static const char *strikes = "4*";
+    //static const char *armMode = "2*";
 
     if (memcmp(this->keypadBuffer, codeLength, 2) == 0)
     {
-        this->bombCodeSize = atoi((this->keypadBuffer + 2));
+        this->bombCodeSize = atol((this->keypadBuffer + 2));
     }
 
-    if (memcmp(this->keypadBuffer, armMode, 2) == 0)
+    if (memcmp(this->keypadBuffer, bombTimer, 2) == 0) {
+        this->bombTime = atol((this->keypadBuffer + 2)) * 1000L;
+    }
+
+    if (memcmp(this->keypadBuffer, displayTimer, 2) == 0) {
+        this->armDisplayTime = this->disarmDisplayTime = atol((this->keypadBuffer + 2)) * 1000L;
+    }
+
+    if (memcmp(this->keypadBuffer, bombTimer, 2) == 0) {
+        this->lockdownTimer = atol((this->keypadBuffer + 2)) * 1000L;
+    }   
+
+    if (memcmp(this->keypadBuffer, strikes, 2) == 0) {
+        this->maximumStrikeCount = atol((this->keypadBuffer + 2));
+    }
+
+    
+
+    /*if (memcmp(this->keypadBuffer, armMode, 2) == 0)
     {
         //todo
         //0 -> InterruptKeypad
@@ -403,7 +439,7 @@ void BombMachine::attemptConfigure()
         {
             //todo
         }
-    }
+    }*/
 }
 
 void BombMachine::tick(unsigned long delta)
@@ -433,13 +469,6 @@ void BombMachine::tick(unsigned long delta)
 
     switch (this->state)
     {
-    case BombState::Armed:
-    {
-        //bomb timer expired
-        if (this->bombTimer == 0)
-            this->setState(BombState::Exploded);
-        break;
-    }
     case BombState::PrepareArming:
     {
         if (this->actionTimer == 0)
@@ -451,6 +480,19 @@ void BombMachine::tick(unsigned long delta)
         //lockdown over -> move to previous prepare state
         if (this->actionTimer == 0)
             this->setState(BombState::PrepareArming);
+        break;
+    }
+    case BombState::Armed:
+    {
+        //bomb timer expired
+        if (this->bombTimer == 0)
+            this->setState(BombState::Exploded);
+        break;
+    }
+    case BombState::Disarming:
+    {
+        if (this->bombTimer == 0)
+            this->setState(BombState::Exploded);
         break;
     }
     case BombState::PrepareDisarming:
@@ -476,8 +518,8 @@ void BombMachine::tick(unsigned long delta)
         }
         if (this->actionTimer == 0)
         {
-            //lockdown over -> move to previous prepare state
-            this->setState(BombState::PrepareDisarming);
+            //lockdown over -> move to armed state
+            this->setState(BombState::Armed);
         }
         break;
     }
@@ -488,18 +530,18 @@ void BombMachine::tick(unsigned long delta)
 
 const BombMachine::BombCode BombMachine::bombCodes[] = {
     //{"8715003"},
-    //{"00000000"},
-    {"99999999", ExtraFastCode},
+    {"00000000", ExtraSlow},
+    {"99999999", ExtraSlow},
     //{"911"},
-    //{"8426"},
+    {"8426", ReverseBomb},
     //{"9713"},
     //{"84269713"},
-    //{"2206"},
+    {"2206", Slow},
     //{"220694"},
-    {"22061994", FastCode | AllSilent},
-    {"31415926", ExtraQuick | SilentArm | Noisy | FastCode},
-    {"3141592", ExtraQuick | ExtraNoisy},
-    {"314159", Quick | Noisy},
+    {"22061994", ExtraFastCode},
+    {"31415926", ExtraQuick | FastCode},
+    {"3141592", ExtraQuick},
+    {"314159", Quick},
     //{"31415"},
     //{"3141"},
     //{"9000"},
@@ -515,8 +557,8 @@ const BombMachine::BombCode BombMachine::bombCodes[] = {
     //{"65536"},
     //{"131072"},
     //{"666"},
-    //{"7355608"}, // -> CS
-    //{"0815"},
+    {"7355608", Quick | FastCode}, // -> CS
+    {"0815", Slow},
     //{"007"},
     //{"404"},
     //{"420"},
