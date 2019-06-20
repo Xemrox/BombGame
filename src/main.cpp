@@ -417,7 +417,7 @@ inline void animateLocked()
   //lockdown in seconds
   unsigned long lockDownTime = bomb.getRemainingActionTime();
   if(lockDownTime < 1000 && lockDownTime > 0) {
-    lockDownTime = 1;
+    lockDownTime = 0;
   } else if(lockDownTime > 1000) {
     lockDownTime /= 1000UL;
     lockDownTime += 1;
@@ -438,7 +438,7 @@ inline void animateLocked()
 
   lc.setRow(0, 7, lockedAnimStep == 0 ? lockedAnimStates[0] : lockedAnimStep > 1 ? lockedAnimStates[2] : lockedAnimStates[1]); //left
 
-  lockedAnimStep = (lockedAnimStep + 1) % 5;
+  lockedAnimStep = (lockedAnimStep + 1) % 4;
 }
 
 #endif
