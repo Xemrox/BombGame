@@ -368,22 +368,29 @@ inline void animateExploded()
     lc.setChar(0, i, 'E', true);
 }
 unsigned int armedAnimStep = 0;
-const static byte armedAnimStates[] = {
+const static byte armedAnimStatesLeft[] = {
+    B01000010,
+    B00011000,
+};
+const static byte armedAnimStatesRight[] = {
     B01100000,
     B00001100,
 };
 inline void animateArmed()
 {
   animationSpeed = 100;
-  lc.clearDisplay(0);
   lc.setRow(0, 5, B00001111); //t
   lc.setChar(0, 4, '-', false);
+  lc.setChar(0, 2, ' ', false);
 
   unsigned long remBombTime = bomb.getRemainingBombTime() / 1000UL;
 
   unsigned long positions = log10(remBombTime) + 1;
   if ( remBombTime == 0 ) {
      positions = 0;
+    lc.setDigit(0, 3, (byte) 0, false);
+    lc.setDigit(0, 2, (byte) 0, false);
+    lc.setDigit(0, 1, (byte) 0, false);
   }
   unsigned long currentPosition = remBombTime;
 
@@ -402,8 +409,8 @@ inline void animateArmed()
     currentPosition = currentPosition / 10UL;
   }
 
-    lc.setRow(0, 7, armedAnimStates[armedAnimStep]);
-    lc.setRow(0, 0, armedAnimStates[armedAnimStep]);
+    lc.setRow(0, 7, armedAnimStatesLeft[armedAnimStep]);
+    lc.setRow(0, 0, armedAnimStatesRight[armedAnimStep]);
 
     armedAnimStep = ( (armedAnimStep +1 ) % 2);
 }
