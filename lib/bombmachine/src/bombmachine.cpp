@@ -412,9 +412,9 @@ void BombMachine::attemptConfigure()
         this->armDisplayTime = this->disarmDisplayTime = atol((this->keypadBuffer + 2)) * 1000L;
     }
 
-    if (memcmp(this->keypadBuffer, bombTimer, 2) == 0) {
-        this->lockdownTimer = atol((this->keypadBuffer + 2)) * 1000L;
-    }   
+    if (memcmp(this->keypadBuffer, lockdownTimer, 2) == 0) {
+        this->lockdownTime = atol((this->keypadBuffer + 2)) * 1000L;
+    }
 
     if (memcmp(this->keypadBuffer, strikes, 2) == 0) {
         this->maximumStrikeCount = atol((this->keypadBuffer + 2));
