@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <binary.h>
 
 #include <LedControl.h>
 #include <Keypad.h>
@@ -47,8 +48,6 @@ BombMachine bomb = BombMachine("8715003*");
 unsigned long tickResolution = 100; //ms
 unsigned long lastTickUpdate = 0;
 
-bool idleAnim = false;
-
 void setup()
 {
   delay(100); //boot
@@ -65,12 +64,17 @@ void setup()
   digitalWrite(Button, 1);
   pinMode(A5, OUTPUT);
 
+  //improve random
   randomSeed(analogRead(0));
+  delay(50);
+  for (int i = 0; i < analogRead(0); i++)
+    random();
 }
 
 bool handleKeypad();
 bool handleButton();
 void handleDisplay(unsigned long, bool);
+void handleSpeaker();
 
 void loop()
 {
@@ -92,7 +96,69 @@ void loop()
     return;
 
   bomb.tick(updateMillis - lastTickUpdate);
+  handleSpeaker();
   lastTickUpdate = updateMillis;
+}
+
+void handleSpeaker()
+{
+  switch (bomb.getState())
+  {
+  case BombMachine::BombState::PrepareArming:
+  case BombMachine::BombState::LockedArming:
+  case BombMachine::BombState::Idle:
+    //shutdown speaker
+    noTone(A5);
+    pinMode(A5, OUTPUT);
+    analogWrite(A5, 0);
+    break;
+  case BombMachine::BombState::Armed:
+  {
+    unsigned long remaining = bomb.getRemainingBombTime();
+    unsigned long total = bomb.getTotalBombTime();
+
+    unsigned long actual = total - remaining;
+    long freq = map(actual, 0, total, 0, 65535);
+    if (freq > 100)
+    {
+      tone(A5, freq);
+    }
+    else
+    {
+      noTone(A5);
+      pinMode(A5, OUTPUT);
+      analogWrite(A5, 255);
+    }
+
+    break;
+  }
+  case BombMachine::BombState::PrepareDisarming:
+  {
+    break;
+  }
+  case BombMachine::BombState::Arming:
+  case BombMachine::BombState::Disarming:
+  {
+    break;
+  }
+  case BombMachine::BombState::LockedDisarming:
+  {
+    break;
+  }
+  case BombMachine::BombState::Disarmed:
+  {
+    pinMode(A5, OUTPUT);
+    analogWrite(A5, 255);
+    break;
+  }
+  case BombMachine::BombState::Exploded:
+  {
+    tone(A5, 200, 200);
+    break;
+  }
+  default:
+    break;
+  }
 }
 
 bool handleKeypad()
@@ -168,6 +234,8 @@ void handleDisplay(unsigned long updateMillis, bool forceUpdate)
 
   if (updateMillis - lastDisplayUpdate < displayUpdateResolution && !forceUpdate && !inAnimation)
     return;
+  if (inAnimation && updateMillis - lastDisplayUpdate < displayAnimationResolution && !forceUpdate)
+    return;
   lastDisplayUpdate = updateMillis;
 
   switch (bomb.getState())
@@ -223,32 +291,22 @@ void handleDisplay(unsigned long updateMillis, bool forceUpdate)
   }
   case BombMachine::BombState::Armed:
   {
-    for (int i = 0; i < 8; i++)
-    {
-      lc.setChar(0, i, 'X', true);
-    }
+    animateArmed();
     break;
   }
   case BombMachine::BombState::Disarmed:
   {
     animateDisarmed();
-
-    for (int i = 0; i < 8; i++)
-    {
-      lc.setChar(0, i, 'D', true);
-    }
     break;
   }
   case BombMachine::BombState::Exploded:
   {
     animateExploded();
-
-    for (int i = 0; i < 8; i++)
-      lc.setChar(0, i, 'E', true);
     break;
   }
   case BombMachine::BombState::LockedArming:
-  case BombMachine::BombState::LockedDisarming: {
+  case BombMachine::BombState::LockedDisarming:
+  {
     animateLocked();
     break;
   }
@@ -261,42 +319,120 @@ void handleDisplay(unsigned long updateMillis, bool forceUpdate)
   }
 }
 
+unsigned int idleAnimDigit = 0;
+unsigned int idleAnimStep = 0;
+
+const static byte idleAnimStates[] = {
+    B00001001, //mid+bottom
+    B01000001, //mid+top
+    B01000010, //left+top
+    B00001100, //left+bottom
+    B00011000, //right+bottom
+    B01100000, //right+top
+};
+const static byte idleAnimLeftStates[] = {
+    B01000010, //left+top
+    B00001100, //left+bottom
+
+    B00000000,
+    B00000000,
+
+    B00000000,
+    B00000000,
+
+    B00000000,
+    B00000000,
+
+    B00000000,
+    B00000000};
+
+const static byte idleAnimRightStates[] = {
+
+    B00000000,
+    B00000000,
+
+    B00000000,
+    B00000000,
+
+    B00000000,
+
+    B00011000, //right+bottom
+    B01100000, //right+top
+
+    B00000000,
+
+    B00000000,
+    B00000000};
+
+const static byte idleAnimScrollStates[] = {
+    B00001001, //mid+bottom
+    B01000001, //mid+top
+    B00000000  //off
+};
+
 inline void animateIdle()
 {
-  char idle0 = ' ';
-  char idle1 = ' ';
+  //lc.clearDisplay(0);
 
-  if (idleAnim)
-  {
-    idle0 = '-';
-    idle1 = '_';
-  }
-  else
-  {
-    idle0 = '_';
-    idle1 = '-';
-  }
-  idleAnim = !idleAnim;
+  //dot t rt rb b lb lt mid
 
-  for (int i = 0; i < 8; i += 2)
+  lc.setRow(0, 7, B00000101); //r
+  lc.setRow(0, 6, B00111101); //d
+  lc.setRow(0, 5, B00111011); //y
+
+  //todo anim
+  lc.setRow(0, 0, idleAnimRightStates[idleAnimStep]);
+  lc.setRow(0, 4, idleAnimLeftStates[idleAnimStep]);
+  idleAnimStep = (idleAnimStep + 1) % 9;
+
+  /*lc.setRow(0, 4, 1 << (idleAnim));
+  lc.setRow(0, 3, 1 << ((idleAnim + 1) % 8));
+  lc.setRow(0, 2, 1 << ((idleAnim + 2) % 8));
+  lc.setRow(0, 1, 1 << ((idleAnim + 3) % 8));
+  lc.setRow(0, 0, 1 << ((idleAnim + 4) % 8));*/
+
+  idleAnimDigit = (idleAnimDigit + 1) % 5;
+
+  //lc.spiTransfer(0, 1, idleAnim ? anim0 : anim1);
+  //lc.spiTransfer(0, 5, !idleAnim ? anim0 : anim1);
+
+  //lc.setRow(0, 0, idleAnim ? anim0 : anim1);
+  //lc.setRow(0, 5, !idleAnim ? anim0 : anim1);
+
+  /*for (int i = 0; i < 8; i += 2)
   {
     lc.setChar(0, i, idle0, idleAnim);
   }
   for (int i = 1; i < 8; i += 2)
   {
     lc.setChar(0, i, idle1, !idleAnim);
+  }*/
+}
+
+inline void animateDisarmed()
+{
+  for (int i = 0; i < 8; i++)
+  {
+    lc.setChar(0, i, 'D', true);
   }
 }
-
-inline void animateDisarmed() {
-
+inline void animateExploded()
+{
+  for (int i = 0; i < 8; i++)
+    lc.setChar(0, i, 'E', true);
 }
-inline void animateExploded() {
-
+inline void animateArmed()
+{
+  for (int i = 0; i < 8; i++)
+  {
+    lc.setChar(0, i, 'X', true);
+  }
 }
-inline void animateArmed() {
-
-}
-inline void animateLocked() {
-
+inline void animateLocked()
+{
+  lc.clearDisplay(0);
+  for (int i = 0; i < 8; i++)
+  {
+    lc.setChar(0, i, 'L', true);
+  }
 }

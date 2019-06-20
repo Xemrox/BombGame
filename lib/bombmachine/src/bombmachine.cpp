@@ -28,7 +28,7 @@ bool BombMachine::allowStateChange(BombState newState) const
     case Disarming: //disarming -> disarmed || locked || exploded
         return (newState == Disarmed || newState == LockedDisarming || newState == Exploded);
     case LockedDisarming:
-        return (newState == PrepareDisarming || newState == Disarmed || newState == Exploded);
+        return (newState == PrepareDisarming || newState == Exploded);
     case Disarmed: //disarmed -> idle
         return (newState == Idle);
     case Exploded: //exploded -> idle
@@ -59,12 +59,18 @@ void BombMachine::setState(BombState newState)
 
     //TODO maybe notify about change for components here...
 
+    this->setActionTimer(newState);
+
     switch (newState)
     {
+    case BombState::Idle:
+    {
+        this->strikeCount = 0;
+        break;
+    }
     case BombState::PrepareArming:
     case BombState::PrepareDisarming:
     {
-        this->setActionTimer(newState);
         this->prepareCode();
         break;
     }
@@ -72,17 +78,20 @@ void BombMachine::setState(BombState newState)
     case BombState::LockedDisarming:
     {
         this->setActionTimer(newState);
+
+        if (newState == BombState::LockedArming)
+            break;
+
         this->strikeCount++;
         if (this->strikeCount >= this->maximumStrikeCount)
-            //you failed!!
-            this->state = BombState::Exploded;
+            newState = BombState::Exploded;
+
         break;
     }
     case BombState::Armed:
     {
         if (this->state == BombState::Arming)
             this->strikeCount = 0;
-        this->setActionTimer(newState);
         break;
     }
     default:
@@ -99,30 +108,35 @@ void BombMachine::setActionTimer(BombMachine::BombState newState)
 {
     switch (newState)
     {
+    case BombState::Idle:
+    {
+        this->actionTimer = 0;
+        this->bombTimer = 0;
+        break;
+    }
     case BombState::PrepareArming:
+    {
         this->actionTimer = this->armDisplayTime;
         break;
+    }
     case BombState::PrepareDisarming:
-        //shift current bomb time to backup
-        this->backgroundTimer = this->actionTimer;
+    {
         this->actionTimer = this->disarmDisplayTime;
         break;
+    }
     case BombState::Armed:
         //only set the timer if we come from arming
         if (this->state == BombState::Arming)
         {
-            this->actionTimer = this->getTotalBombTime();
-        }
-        else
-        {
-            //otherwise restore timer
-            this->actionTimer = this->backgroundTimer;
-            this->backgroundTimer = 0;
+            this->bombTimer = this->getTotalBombTime();
         }
         break;
     case BombState::LockedArming:
     case BombState::LockedDisarming:
+    {
         this->actionTimer = this->lockdownTime;
+        break;
+    }
     default:
         break;
     }
@@ -130,35 +144,34 @@ void BombMachine::setActionTimer(BombMachine::BombState newState)
 
 unsigned long BombMachine::getTotalBombTime() const
 {
-    long mod = 0;
+    unsigned long modPos = 0;
+    unsigned long modNeg = 0;
     unsigned long timer = this->bombTime;
     if (this->activeFeatures & Quick)
-        mod -= timer / 10;
+        modNeg += timer / 10;
     if (this->activeFeatures & ExtraQuick)
-        mod -= timer / 10;
+        modNeg += timer / 10;
     if (this->activeFeatures & Slow)
-        mod += timer / 10;
+        modPos += timer / 10;
     if (this->activeFeatures & ExtraSlow)
-        mod += timer / 10;
+        modPos += timer / 10;
 
-    if (this->actionTimer > mod && mod < 0)
+    if (
+        (modPos > modNeg && modPos - modNeg > this->actionTimer) ||
+        (modNeg >= modPos && modNeg - modPos > this->actionTimer))
     {
         //lower limit for modifications
         return 100;
     }
     else
     {
-        return timer + mod;
+        return timer + modPos - modNeg;
     }
 }
 
 unsigned long BombMachine::getRemainingBombTime() const
 {
-    if (this->state == BombState::Armed)
-        return this->actionTimer;
-    if (this->state == BombState::PrepareDisarming || this->state == BombState::Disarming || this->state == BombState::LockedDisarming)
-        return this->backgroundTimer;
-    return 0;
+    return this->bombTimer;
 }
 
 BombMachine::BombState BombMachine::getState() const
@@ -209,14 +222,12 @@ void BombMachine::pressButton()
     {
         bool disarmResult = this->tryDisarmBomb();
         if (!disarmResult)
-        {
             this->setState(BombState::LockedDisarming);
-        }
         break;
     }
     case BombState::Armed:
     {
-        this->setState(BombState::Disarming);
+        this->setState(BombState::PrepareDisarming);
         break;
     }
     case BombState::Configuring:
@@ -310,13 +321,15 @@ bool BombMachine::matchCode() const
 
     //alternative memcmp
 
-    for (unsigned int i = 0; i < this->keypadBufferPosition; i++)
+    return 0 == memcmp(this->keypadBuffer, this->bombCode, this->bombCodeSize);
+
+    /*for (unsigned int i = 0; i < this->keypadBufferPosition; i++)
     {
         if (this->keypadBuffer[i] != this->bombCode[i])
             return false;
-    }
+    }*/
 
-    return true;
+    //return true;
 }
 
 bool BombMachine::tryArmBomb()
@@ -385,32 +398,34 @@ void BombMachine::attemptConfigure()
 void BombMachine::tick(unsigned long delta)
 {
     //watch out for underflow
-    if (this->backgroundTimer > delta)
+    if (this->bombTimer > delta)
     {
-        this->backgroundTimer -= delta;
+        this->bombTimer -= delta;
     }
-    else if (this->backgroundTimer <= delta)
+    else if (this->bombTimer <= delta)
     {
-        this->backgroundTimer = 0;
+        this->bombTimer = 0;
     }
 
     //watch out for underflow
     if (this->actionTimer > delta)
     {
         this->actionTimer -= delta;
-        //return; //decrement timer but stop here
     }
     else if (this->actionTimer <= delta)
     {
         this->actionTimer = 0;
     }
 
+    if (this->bombTimer > 0 && this->actionTimer > 0)
+        return;
+
     switch (this->state)
     {
     case BombState::Armed:
     {
         //bomb timer expired
-        if (this->actionTimer == 0)
+        if (this->bombTimer == 0)
             this->setState(BombState::Exploded);
         break;
     }
@@ -430,7 +445,7 @@ void BombMachine::tick(unsigned long delta)
     case BombState::PrepareDisarming:
     {
         //display time expired -> move to next state
-        if (this->backgroundTimer == 0)
+        if (this->bombTimer == 0)
         {
             this->setState(BombState::Exploded);
             return;
@@ -443,7 +458,7 @@ void BombMachine::tick(unsigned long delta)
     }
     case BombState::LockedDisarming:
     {
-        if (this->backgroundTimer == 0)
+        if (this->bombTimer == 0)
         {
             this->setState(BombState::Exploded);
             return;
