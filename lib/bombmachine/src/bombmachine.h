@@ -52,7 +52,7 @@ public:
     int getKeyPosition() const;
 
     const char *const getBombCode() const;
-    int getBombCodeSize() const;
+    unsigned int getBombCodeSize() const;
 
     BombState getState() const;
     void setState(BombState);
@@ -118,7 +118,7 @@ private:
 
     unsigned long int armDisplayTime = 2UL * 1000UL;
     unsigned long int disarmDisplayTime = 2UL * 1000UL;
-    unsigned long int bombTime = 1UL * 60UL * 1000UL;
+    unsigned long int bombTime = /*1UL */ 10UL * 1000UL;
     unsigned long int lockdownTime = 15UL * 1000UL;
 
     unsigned int strikeCount = 0;

@@ -33,7 +33,7 @@ bool BombMachine::allowStateChange(BombState newState) const
     case Disarming: //disarming -> disarmed || locked || exploded
         return (newState == Disarmed || newState == LockedDisarming || newState == Exploded);
     case LockedDisarming:
-        return (newState == PrepareDisarming || newState == Exploded);
+        return (newState == Armed || newState == Exploded);
     case Disarmed: //disarmed -> idle
         return (newState == Idle);
     case Exploded: //exploded -> idle
@@ -215,7 +215,7 @@ const char *const BombMachine::getBombCode() const
     return this->bombCode;
 }
 
-int BombMachine::getBombCodeSize() const
+unsigned int BombMachine::getBombCodeSize() const
 {
     return this->bombCodeSize;
 }
@@ -452,13 +452,6 @@ void BombMachine::tick(unsigned long delta)
 
     switch (this->state)
     {
-    case BombState::Armed:
-    {
-        //bomb timer expired
-        if (this->bombTimer == 0)
-            this->setState(BombState::Exploded);
-        break;
-    }
     case BombState::PrepareArming:
     {
         if (this->actionTimer == 0)
@@ -470,6 +463,19 @@ void BombMachine::tick(unsigned long delta)
         //lockdown over -> move to previous prepare state
         if (this->actionTimer == 0)
             this->setState(BombState::PrepareArming);
+        break;
+    }
+    case BombState::Armed:
+    {
+        //bomb timer expired
+        if (this->bombTimer == 0)
+            this->setState(BombState::Exploded);
+        break;
+    }
+    case BombState::Disarming:
+    {
+        if (this->bombTimer == 0)
+            this->setState(BombState::Exploded);
         break;
     }
     case BombState::PrepareDisarming:
@@ -495,8 +501,8 @@ void BombMachine::tick(unsigned long delta)
         }
         if (this->actionTimer == 0)
         {
-            //lockdown over -> move to previous prepare state
-            this->setState(BombState::PrepareDisarming);
+            //lockdown over -> move to armed state
+            this->setState(BombState::Armed);
         }
         break;
     }
