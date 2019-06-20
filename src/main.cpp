@@ -386,13 +386,19 @@ inline void animateArmed()
 
   unsigned long remBombTime = bomb.getRemainingBombTime() / 1000UL;
   unsigned long min = remBombTime / 60;
-  unsigned long sec = remBombTime - ( min * 60);
+  unsigned long sec = remBombTime % 60;
 
   if ( min == 0 && sec == 0) {
     lc.setDigit(0, 5, (byte) 0, false);
     lc.setDigit(0, 4, (byte) 0, true);
     lc.setDigit(0, 3, (byte) 0, false);
     lc.setDigit(0, 2, (byte) 0, false);
+  
+    lc.setChar(0, 0, '-', false);
+    lc.setChar(0, 1, '-', false);
+    lc.setChar(0, 6, '-', false);
+    lc.setChar(0, 7, '-', false);
+    return;
   }
 
   unsigned long minPositions = log10(min) + 1;
@@ -410,21 +416,21 @@ inline void animateArmed()
   for (unsigned long i = 0; i < minPositions; i++ )
   {
     unsigned long currentDigit = currentMinPosition % 10UL;
-    lc.setDigit(0, 1+i, (byte) currentDigit, false);
+    lc.setDigit(0, 4+i, (byte) currentDigit, i == 0 ? true : false );
     currentMinPosition = currentMinPosition / 10UL;
   }
 
   for (unsigned long i = 0; i < secPositions; i++ )
   {
     unsigned long currentDigit = currentSecPosition % 10UL;
-    lc.setDigit(0, 1+i, (byte) currentDigit, false);
+    lc.setDigit(0, 2+i, (byte) currentDigit, false);
     currentSecPosition = currentSecPosition / 10UL;
   }
 
     lc.setRow(0, 7, armedAnimStatesLeft[armedAnimStep]);
     lc.setRow(0, 6, armedAnimStatesLeft[armedAnimStep+1]);
-    lc.setRow(0, 1, armedAnimStatesRight[armedAnimStep]);
-    lc.setRow(0, 0, armedAnimStatesRight[armedAnimStep+1]);
+    lc.setRow(0, 1, armedAnimStatesRight[armedAnimStep+1]);
+    lc.setRow(0, 0, armedAnimStatesRight[armedAnimStep]);
 
     armedAnimStep = ( (armedAnimStep +1 ) % 2);
 }
