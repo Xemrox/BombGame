@@ -74,7 +74,9 @@ public:
     unsigned long getRemainingBombTime() const;
     unsigned long getTotalBombTime() const;
 
-    BombMachine(const char configCode[9]) : configCode(configCode)
+    unsigned long getRemainingActionTime() const;
+
+    BombMachine(const char configCode[9], void (*changeHandler)(void)) : configCode(configCode)
     {
         this->keypadBuffer = new char[this->keypadBufferSize];
         for (unsigned int i = 0; i < this->keypadBufferSize; i++)

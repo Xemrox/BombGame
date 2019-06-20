@@ -1,8 +1,13 @@
 
 #include "bombmachine.h"
-//#include <random>
 #include <string.h>
+
+#ifdef TEST
+#include <ArduinoFake.h>
+#else
 #include "Arduino.h"
+#endif
+
 //#include <iostream>
 
 bool BombMachine::allowStateChange(BombState newState) const
@@ -177,6 +182,10 @@ unsigned long BombMachine::getRemainingBombTime() const
     return this->bombTimer;
 }
 
+unsigned long BombMachine::getRemainingActionTime() const {
+    return this->actionTimer;
+}
+
 BombMachine::BombState BombMachine::getState() const
 {
     return this->state;
@@ -300,7 +309,6 @@ void BombMachine::prepareCode()
     this->bombCode[this->bombCodeSize] = '\0';
 
     const char *rndBase = "0123456789";
-    //int rnd = random(0, 10);
 
     int effectiveCodeSize = this->bombCodeSize;
     if (this->activeFeatures & FastCode)

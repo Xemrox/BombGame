@@ -1,9 +1,13 @@
+#ifdef TEST
+#include <ArduinoFake.h>
+void loop() {}
+void setup() {}
+#else
 #include <Arduino.h>
 #include <binary.h>
-
 #include <LedControl.h>
 #include <Keypad.h>
-//#include <HardwareSerial.h>
+
 #include "bombmachine.h"
 
 #define D12 12 //data
@@ -43,7 +47,7 @@ byte colPins[COLS] = {D09, D08, D07};      //connect to the column pinouts of th
 
 Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
 
-BombMachine bomb = BombMachine("8715003*");
+BombMachine bomb = BombMachine("8715003*", nullptr);
 
 unsigned long tickResolution = 100; //ms
 unsigned long lastTickUpdate = 0;
@@ -117,7 +121,7 @@ void handleSpeaker()
     unsigned long remaining = bomb.getRemainingBombTime();
     unsigned long total = bomb.getTotalBombTime();
 
-    unsigned long actual = total - remaining;
+    /*unsigned long actual = total - remaining;
     long freq = map(actual, 0, total, 0, 65535);
     if (freq > 100)
     {
@@ -125,10 +129,12 @@ void handleSpeaker()
     }
     else
     {
-      noTone(A5);
+      
       pinMode(A5, OUTPUT);
       analogWrite(A5, 255);
-    }
+    }*/
+    noTone(A5);
+    analogWrite(A5, 255);
 
     break;
   }
@@ -147,13 +153,12 @@ void handleSpeaker()
   }
   case BombMachine::BombState::Disarmed:
   {
-    pinMode(A5, OUTPUT);
-    analogWrite(A5, 255);
+    tone(A5, 50);
     break;
   }
   case BombMachine::BombState::Exploded:
   {
-    tone(A5, 200, 200);
+    tone(A5, 50);
     break;
   }
   default:
@@ -211,8 +216,8 @@ bool handleButton()
 }
 
 unsigned long lastDisplayUpdate = 0;
-unsigned long displayUpdateResolution = 5000;
-unsigned long displayAnimationResolution = 500;
+unsigned long displayUpdateResolution = 2000;
+unsigned long animationSpeed = 250;
 
 inline void animateIdle();
 inline void animateDisarmed();
@@ -234,7 +239,7 @@ void handleDisplay(unsigned long updateMillis, bool forceUpdate)
 
   if (updateMillis - lastDisplayUpdate < displayUpdateResolution && !forceUpdate && !inAnimation)
     return;
-  if (inAnimation && updateMillis - lastDisplayUpdate < displayAnimationResolution && !forceUpdate)
+  if (inAnimation && updateMillis - lastDisplayUpdate < animationSpeed && !forceUpdate)
     return;
   lastDisplayUpdate = updateMillis;
 
@@ -319,94 +324,36 @@ void handleDisplay(unsigned long updateMillis, bool forceUpdate)
   }
 }
 
-unsigned int idleAnimDigit = 0;
 unsigned int idleAnimStep = 0;
 
-const static byte idleAnimStates[] = {
-    B00001001, //mid+bottom
-    B01000001, //mid+top
-    B01000010, //left+top
-    B00001100, //left+bottom
-    B00011000, //right+bottom
-    B01100000, //right+top
-};
-const static byte idleAnimLeftStates[] = {
-    B01000010, //left+top
-    B00001100, //left+bottom
-
-    B00000000,
-    B00000000,
-
-    B00000000,
-    B00000000,
-
-    B00000000,
-    B00000000,
-
-    B00000000,
-    B00000000};
-
-const static byte idleAnimRightStates[] = {
-
-    B00000000,
-    B00000000,
-
-    B00000000,
-    B00000000,
-
-    B00000000,
-
-    B00011000, //right+bottom
-    B01100000, //right+top
-
-    B00000000,
-
-    B00000000,
-    B00000000};
-
 const static byte idleAnimScrollStates[] = {
+    B00000000,  //off
+
     B00001001, //mid+bottom
     B01000001, //mid+top
-    B00000000  //off
+
+    B01000011, //left+top
+    B00001101, //left+bottom
+
+    B00011001, //right+bottom
+    B01100001, //right+top
 };
 
 inline void animateIdle()
 {
-  //lc.clearDisplay(0);
-
-  //dot t rt rb b lb lt mid
+  animationSpeed = 100;
 
   lc.setRow(0, 7, B00000101); //r
   lc.setRow(0, 6, B00111101); //d
   lc.setRow(0, 5, B00111011); //y
 
-  //todo anim
-  lc.setRow(0, 0, idleAnimRightStates[idleAnimStep]);
-  lc.setRow(0, 4, idleAnimLeftStates[idleAnimStep]);
-  idleAnimStep = (idleAnimStep + 1) % 9;
+  lc.setRow(0, 4, idleAnimScrollStates[idleAnimStep == 0 ? 3 : idleAnimStep == 1 ? 4 : 0]);
+  lc.setRow(0, 3, idleAnimScrollStates[idleAnimStep == 2 ? 1 : idleAnimStep == 9 ? 2 : 0]);
+  lc.setRow(0, 2, idleAnimScrollStates[idleAnimStep == 3 ? 1 : idleAnimStep == 8 ? 2 : 0]);
+  lc.setRow(0, 1, idleAnimScrollStates[idleAnimStep == 4 ? 1 : idleAnimStep == 7 ? 2 : 0]);
+  lc.setRow(0, 0, idleAnimScrollStates[idleAnimStep == 5 ? 5 : idleAnimStep == 6 ? 6 : 0]);
 
-  /*lc.setRow(0, 4, 1 << (idleAnim));
-  lc.setRow(0, 3, 1 << ((idleAnim + 1) % 8));
-  lc.setRow(0, 2, 1 << ((idleAnim + 2) % 8));
-  lc.setRow(0, 1, 1 << ((idleAnim + 3) % 8));
-  lc.setRow(0, 0, 1 << ((idleAnim + 4) % 8));*/
-
-  idleAnimDigit = (idleAnimDigit + 1) % 5;
-
-  //lc.spiTransfer(0, 1, idleAnim ? anim0 : anim1);
-  //lc.spiTransfer(0, 5, !idleAnim ? anim0 : anim1);
-
-  //lc.setRow(0, 0, idleAnim ? anim0 : anim1);
-  //lc.setRow(0, 5, !idleAnim ? anim0 : anim1);
-
-  /*for (int i = 0; i < 8; i += 2)
-  {
-    lc.setChar(0, i, idle0, idleAnim);
-  }
-  for (int i = 1; i < 8; i += 2)
-  {
-    lc.setChar(0, i, idle1, !idleAnim);
-  }*/
+  idleAnimStep = (idleAnimStep + 1) % 10;
 }
 
 inline void animateDisarmed()
@@ -428,11 +375,43 @@ inline void animateArmed()
     lc.setChar(0, i, 'X', true);
   }
 }
+unsigned int lockedAnimStep = 0;
+const static byte lockedAnimStates[] = {
+    B00000000,  //off
+    B00000110, //left
+    B00000111, //left+mid
+    B00110000, //right
+    B00110001, //right+mid
+    B00000001,
+};
 inline void animateLocked()
 {
-  lc.clearDisplay(0);
-  for (int i = 0; i < 8; i++)
-  {
-    lc.setChar(0, i, 'L', true);
+  animationSpeed = 250;
+  //lockdown in seconds
+  unsigned long lockDownTime = bomb.getRemainingActionTime();
+  if(lockDownTime < 1000 && lockDownTime > 0) {
+    lockDownTime = 1;
+  } else if(lockDownTime > 1000) {
+    lockDownTime /= 1000UL;
+    lockDownTime += 1;
+  } else {
+    lockDownTime = 0;
   }
+
+  lc.setRow(0, 0, lockedAnimStep == 0 ? lockedAnimStates[0] : lockedAnimStep > 1 ? lockedAnimStates[4] : lockedAnimStates[3]); //right
+
+  lc.setRow(0, 1, lockedAnimStep == 0 ? lockedAnimStates[0] : lockedAnimStep >= 2 ? lockedAnimStates[5] : lockedAnimStates[0]);
+  lc.setRow(0, 2, lockedAnimStep == 0 ? lockedAnimStates[0] : lockedAnimStep >= 3 ? lockedAnimStates[5] : lockedAnimStates[0]);
+
+  lc.setDigit(0, 3, lockDownTime % 10UL, true);
+  lc.setDigit(0, 4, (lockDownTime / 10UL) % 10UL, true);
+
+  lc.setRow(0, 5, lockedAnimStep == 0 ? lockedAnimStates[0] : lockedAnimStep >= 3 ? lockedAnimStates[5] : lockedAnimStates[0]);
+  lc.setRow(0, 6, lockedAnimStep == 0 ? lockedAnimStates[0] : lockedAnimStep >= 2 ? lockedAnimStates[5] : lockedAnimStates[0]);
+
+  lc.setRow(0, 7, lockedAnimStep == 0 ? lockedAnimStates[0] : lockedAnimStep > 1 ? lockedAnimStates[2] : lockedAnimStates[1]); //left
+
+  lockedAnimStep = (lockedAnimStep + 1) % 5;
 }
+
+#endif

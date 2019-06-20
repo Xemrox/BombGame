@@ -1,9 +1,7 @@
-
 #include "bombmachine.h"
 #include <unity.h>
 #include <time.h>
 #include <iostream>
-#include <random>
 
 BombMachine* bomb;
 
