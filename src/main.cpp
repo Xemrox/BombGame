@@ -325,10 +325,7 @@ void handleDisplay(unsigned long updateMillis, bool forceUpdate)
 }
 
 unsigned int idleAnimStep = 0;
-
-const static byte idleAnimScrollStates[] = {
-    B00000000,  //off
-
+const static byte idleAnimStates[] = {
     B00001001, //mid+bottom
     B01000001, //mid+top
 
@@ -368,12 +365,40 @@ inline void animateExploded()
   for (int i = 0; i < 8; i++)
     lc.setChar(0, i, 'E', true);
 }
+const static byte armedAnimStates[] = {
+    B00000111,
+    B00000001,
+    B00110001,
+};
 inline void animateArmed()
 {
-  for (int i = 0; i < 8; i++)
-  {
-    lc.setChar(0, i, 'X', true);
+  lc.clearDisplay(0);
+  lc.setRow(0, 5, B00001111); //t
+  lc.setChar(0, 4, '-', true);
+
+  unsigned long remBombTime = bomb.getRemainingBombTime() / 1000UL;
+
+  unsigned long positions = log10(remBombTime) + 1;
+  unsigned long currentPosition = remBombTime;
+
+  if ( positions == 1 ){
+    lc.setDigit(0, 3, (byte) 0, true);
+    lc.setDigit(0, 2, (byte) 0, true);
+  } 
+  if ( positions == 2 ){
+    lc.setDigit(0, 3, (byte) 0, true);
   }
+
+  for (unsigned long i = 0; i < positions; i++ )
+  {
+    unsigned long currentDigit = currentPosition % 10UL;
+    lc.setDigit(0, 1+i, (byte) currentDigit, true);
+    currentPosition = currentPosition / 10UL;
+  }
+
+    lc.setRow(0, 7, armedAnimStates[0]);
+    lc.setRow(0, 6, armedAnimStates[1]);
+    lc.setRow(0, 0, armedAnimStates[2]);
 }
 unsigned int lockedAnimStep = 0;
 const static byte lockedAnimStates[] = {
