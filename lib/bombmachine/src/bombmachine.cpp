@@ -394,6 +394,9 @@ void BombMachine::attemptConfigure()
 {
     static const char *codeLength = "0*";
     static const char *bombTimer = "1*";
+    static const char *displayTimer = "2*";
+    static const char *lockdownTimer = "3*";
+    static const char *strikes = "4*";
     //static const char *armMode = "2*";
 
     if (memcmp(this->keypadBuffer, codeLength, 2) == 0)
@@ -402,8 +405,22 @@ void BombMachine::attemptConfigure()
     }
 
     if (memcmp(this->keypadBuffer, bombTimer, 2) == 0) {
-        this->bombTime = atol((this->keypadBuffer + 2));
+        this->bombTime = atol((this->keypadBuffer + 2)) * 1000L;
     }
+
+    if (memcmp(this->keypadBuffer, displayTimer, 2) == 0) {
+        this->armDisplayTime = this->disarmDisplayTime = atol((this->keypadBuffer + 2)) * 1000L;
+    }
+
+    if (memcmp(this->keypadBuffer, bombTimer, 2) == 0) {
+        this->lockdownTimer = atol((this->keypadBuffer + 2)) * 1000L;
+    }   
+
+    if (memcmp(this->keypadBuffer, strikes, 2) == 0) {
+        this->maximumStrikeCount = atol((this->keypadBuffer + 2));
+    }
+
+    
 
     /*if (memcmp(this->keypadBuffer, armMode, 2) == 0)
     {

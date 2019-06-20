@@ -118,7 +118,7 @@ private:
 
     unsigned long int armDisplayTime = 2UL * 1000UL;
     unsigned long int disarmDisplayTime = 2UL * 1000UL;
-    unsigned long int bombTime = /*1UL */ 10UL * 1000UL;
+    unsigned long int bombTime = 5UL * 60UL * 1000UL;
     unsigned long int lockdownTime = 15UL * 1000UL;
 
     unsigned int strikeCount = 0;
