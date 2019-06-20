@@ -275,7 +275,6 @@ void handleDisplay(unsigned long updateMillis, bool forceUpdate)
   case BombMachine::BombState::Configuring:
   {
     lc.clearDisplay(0);
-    lc.clearDisplay(0);
     const char *code = bomb.getKeyBuffer();
     for (int i = 0; i < bomb.getKeyPosition(); i++)
     {
@@ -326,7 +325,7 @@ void handleDisplay(unsigned long updateMillis, bool forceUpdate)
 
 unsigned int idleAnimStep = 0;
 const static byte idleAnimScrollStates[] = {
-    B00000000,  //off
+    B00000000, //off
 
     B00001001, //mid+bottom
     B01000001, //mid+top
@@ -388,57 +387,38 @@ inline void animateArmed()
   unsigned long min = remBombTime / 60;
   unsigned long sec = remBombTime % 60;
 
-  if ( min == 0 && sec == 0) {
-    lc.setDigit(0, 5, (byte) 0, false);
-    lc.setDigit(0, 4, (byte) 0, true);
-    lc.setDigit(0, 3, (byte) 0, false);
-    lc.setDigit(0, 2, (byte) 0, false);
-  
+  if (min == 0 && sec == 0)
+  {
+    lc.setDigit(0, 5, (byte)0, false);
+    lc.setDigit(0, 4, (byte)0, true);
+    lc.setDigit(0, 3, (byte)0, false);
+    lc.setDigit(0, 2, (byte)0, false);
+
     lc.setChar(0, 0, '-', false);
     lc.setChar(0, 1, '-', false);
     lc.setChar(0, 6, '-', false);
     lc.setChar(0, 7, '-', false);
-    return;
   }
-
-  unsigned long minPositions = log10(min) + 1;
-  unsigned long secPositions = log10(sec) + 1;
-  unsigned long currentMinPosition = min;
-  unsigned long currentSecPosition = sec;
-
-  if ( minPositions == 1 ){
-    lc.setDigit(0, 5, (byte) 0, false);
-  } 
-  if ( secPositions == 1 ){
-    lc.setDigit(0, 3, (byte) 0, false);
-  } 
-
-  for (unsigned long i = 0; i < minPositions; i++ )
+  else
   {
-    unsigned long currentDigit = currentMinPosition % 10UL;
-    lc.setDigit(0, 4+i, (byte) currentDigit, i == 0 ? true : false );
-    currentMinPosition = currentMinPosition / 10UL;
-  }
 
-  for (unsigned long i = 0; i < secPositions; i++ )
-  {
-    unsigned long currentDigit = currentSecPosition % 10UL;
-    lc.setDigit(0, 2+i, (byte) currentDigit, false);
-    currentSecPosition = currentSecPosition / 10UL;
-  }
+    lc.setDigit(0, 5, (byte)min / 10, false);
+    lc.setDigit(0, 4, (byte)min % 10, true);
+    lc.setDigit(0, 3, (byte)sec / 10, false);
+    lc.setDigit(0, 2, (byte)sec % 10, false);
 
     lc.setRow(0, 7, armedAnimStatesLeft[armedAnimStep]);
-    lc.setRow(0, 6, armedAnimStatesLeft[armedAnimStep+1]);
-    lc.setRow(0, 1, armedAnimStatesRight[armedAnimStep+1]);
+    lc.setRow(0, 6, armedAnimStatesLeft[armedAnimStep + 1]);
+    lc.setRow(0, 1, armedAnimStatesRight[armedAnimStep + 1]);
     lc.setRow(0, 0, armedAnimStatesRight[armedAnimStep]);
 
-    armedAnimStep = ( (armedAnimStep +1 ) % 2);
+    armedAnimStep = ((armedAnimStep + 1) % 2);
+  }
 }
-
 
 unsigned int lockedAnimStep = 0;
 const static byte lockedAnimStates[] = {
-    B00000000,  //off
+    B00000000, //off
     B00000110, //left
     B00000111, //left+mid
     B00110000, //right
@@ -450,12 +430,17 @@ inline void animateLocked()
   animationSpeed = 250;
   //lockdown in seconds
   unsigned long lockDownTime = bomb.getRemainingActionTime();
-  if(lockDownTime < 1000 && lockDownTime > 0) {
+  if (lockDownTime < 1000 && lockDownTime > 0)
+  {
     lockDownTime = 0;
-  } else if(lockDownTime > 1000) {
+  }
+  else if (lockDownTime > 1000)
+  {
     lockDownTime /= 1000UL;
     lockDownTime += 1;
-  } else {
+  }
+  else
+  {
     lockDownTime = 0;
   }
 
